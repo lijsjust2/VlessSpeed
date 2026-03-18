@@ -53,14 +53,7 @@
    wrangler login
    ```
 
-3. 创建 KV 命名空间：
-   ```bash
-   wrangler kv:namespace create "KV"
-   ```
-
-4. 将返回的 ID 填入 [`wrangler.toml`](file:///d:\edgetunnel\sub-optimizer\wrangler.toml) 文件中
-
-5. 部署：
+3. 部署（无需预先配置 KV）：
    ```bash
    wrangler deploy
    ```
@@ -74,7 +67,7 @@
 | `ADMIN` | ✅ | 后台管理密码 | `your_password` |
 | `KEY` | ❌ | 加密密钥（可选） | `your_secret_key` |
 
-### 4. 绑定 KV 命名空间
+### 4. 绑定 KV 命名空间（部署后手动绑定）
 
 在 Worker 设置中绑定 KV 命名空间：
 
