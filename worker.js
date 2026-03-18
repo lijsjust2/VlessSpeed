@@ -208,11 +208,6 @@ export default {
                 return new Response('重定向中...', { status: 302, headers: { 'Location': '/login' } });
             }
 
-            if (访问路径 === 'admin/config.json') {
-                const config = await 读取配置(env);
-                return new Response(JSON.stringify(config, null, 2), { status: 200, headers: { 'Content-Type': 'application/json' } });
-            }
-
             if (访问路径 === 'admin/config.json' && request.method === 'POST') {
                 try {
                     if (!env.KV || typeof env.KV.put !== 'function') {
@@ -224,6 +219,11 @@ export default {
                 } catch (error) {
                     return new Response(JSON.stringify({ error: '保存配置失败: ' + error.message }), { status: 500, headers: { 'Content-Type': 'application/json;charset=utf-8' } });
                 }
+            }
+
+            if (访问路径 === 'admin/config.json') {
+                const config = await 读取配置(env);
+                return new Response(JSON.stringify(config, null, 2), { status: 200, headers: { 'Content-Type': 'application/json' } });
             }
 
             return new Response(管理页面HTML, { 
