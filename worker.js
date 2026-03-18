@@ -215,6 +215,9 @@ export default {
 
             if (访问路径 === 'admin/config.json' && request.method === 'POST') {
                 try {
+                    if (!env.KV || typeof env.KV.put !== 'function') {
+                        return new Response(JSON.stringify({ error: 'KV 命名空间未绑定，请在 Cloudflare Dashboard 中绑定 KV 命名空间' }), { status: 500, headers: { 'Content-Type': 'application/json;charset=utf-8' } });
+                    }
                     const newConfig = await request.json();
                     await env.KV.put('config.json', JSON.stringify(newConfig, null, 2));
                     return new Response(JSON.stringify({ success: true, message: '配置已保存' }), { status: 200, headers: { 'Content-Type': 'application/json;charset=utf-8' } });
@@ -269,6 +272,12 @@ async function MD5MD5(string) {
 
 async function 读取配置(env) {
     try {
+        if (!env.KV || typeof env.KV.get !== 'function') {
+            return {
+                原订阅链接: '',
+                优选地址: []
+            };
+        }
         const configStr = await env.KV.get('config.json');
         if (configStr) {
             return JSON.parse(configStr);
