@@ -1,0 +1,18 @@
+{
+  "name": "vless-subscription-optimizer",
+  "version": "1.0.0",
+  "description": "A VLESS Reality subscription optimizer tool for Cloudflare Workers",
+  "main": "worker.js",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "vless",
+    "subscription",
+    "optimizer"
+  ],
+  "author": "",
+  "license": "MIT"
+}

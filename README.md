@@ -20,15 +20,28 @@
 
 ### 2. 部署步骤
 
-#### 方法一：通过 Cloudflare Workers 部署
+#### 方法一：通过 Cloudflare Workers + GitHub 部署（推荐）
+
+1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
+2. 进入 **Workers & Pages** > **创建应用程序**
+3. 选择 **连接到 Git**
+4. 授权 Cloudflare 访问你的 GitHub 账号
+5. 选择仓库 `VlessSpeed`
+6. 点击 **开始设置**
+7. 在 **构建和部署**设置中：
+   - 构建命令：留空（无需构建）
+   - 输出目录：留空
+8. 点击 **保存并部署**
+
+#### 方法二：通过 Cloudflare Workers 手动部署
 
 1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
 2. 进入 **Workers & Pages** > **创建应用程序**
 3. 选择 **创建 Worker**
-4. 将 [`_worker.js`](file:///d:\edgetunnel\sub-optimizer\_worker.js) 的内容粘贴到 Worker 编辑器中
+4. 将 [`worker.js`](file:///d:\edgetunnel\sub-optimizer\worker.js) 的内容粘贴到 Worker 编辑器中
 5. 点击 **部署**
 
-#### 方法二：通过 Wrangler CLI 部署
+#### 方法三：通过 Wrangler CLI 部署
 
 1. 安装 Wrangler CLI：
    ```bash
@@ -146,8 +159,10 @@ https://your-domain.com/sub
 
 ```
 sub-optimizer/
-├── _worker.js          # Worker 主程序
+├── worker.js          # Worker 主程序
+├── package.json        # 项目配置文件
 ├── wrangler.toml       # Wrangler 配置文件
+├── admin.html          # 管理后台页面（备用）
 └── README.md           # 项目说明文档
 ```
 
