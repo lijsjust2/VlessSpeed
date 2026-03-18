@@ -238,7 +238,10 @@ export default {
             return 响应;
         }
 
-        if (访问路径 === 'sub') {
+        if (访问路径.startsWith('sub')) {
+            const url = new URL(request.url);
+            const format = url.searchParams.get('format') || 'auto';
+            
             const config = await 读取配置(env);
             const 优选地址列表 = config.优选地址 || [];
             const 原订阅链接 = config.原订阅链接 || '';
@@ -247,12 +250,58 @@ export default {
                 return new Response('请先在后台配置原订阅链接和优选地址', { status: 400 });
             }
 
-            const 新订阅链接 = 生成优选订阅(原订阅链接, 优选地址列表);
-            return new Response(新订阅链接, { 
+            const 订阅配置 = 解析VLESS订阅(原订阅链接);
+            if (!订阅配置) {
+                return new Response('解析订阅链接失败', { status: 400 });
+            }
+
+            const 新订阅列表 = [];
+            
+            优选地址列表.forEach(地址行 => {
+                let 地址 = 地址行.trim();
+                let 节点名 = '';
+                
+                if (地址.includes('#')) {
+                    const parts = 地址.split('#');
+                    地址 = parts[0].trim();
+                    节点名 = parts.slice(1).join('#').trim();
+                }
+                
+                if (!节点名) {
+                    节点名 = `${订阅配置.remark}_${地址}`;
+                }
+                
+                const 新订阅 = `vless://${订阅配置.uuid}@${地址}:${订阅配置.port}?encryption=${订阅配置.params.encryption}&flow=${订阅配置.params.flow}&security=${订阅配置.params.security}&sni=${订阅配置.params.sni}&fp=${订阅配置.params.fp}&pbk=${订阅配置.params.pbk}&sid=${订阅配置.params.sid}&spx=${订阅配置.params.spx}&type=${订阅配置.params.type}&headerType=${订阅配置.params.headerType}#${encodeURIComponent(节点名)}`;
+                新订阅列表.push(新订阅);
+            });
+
+            let content = '';
+            let contentType = 'text/plain;charset=utf-8';
+            let filename = 'subscription.txt';
+
+            if (format === 'clash') {
+                const clashConfig = 生成Clash配置(新订阅列表);
+                content = JSON.stringify(clashConfig, null, 2);
+                contentType = 'application/json;charset=utf-8';
+                filename = 'clash.json';
+            } else if (format === 'sb' || format === 'singbox') {
+                const sbConfig = 生成SingBox配置(新订阅列表);
+                content = JSON.stringify(sbConfig, null, 2);
+                contentType = 'application/json;charset=utf-8';
+                filename = 'singbox.json';
+            } else if (format === 'b64' || format === 'base64') {
+                content = btoa(新订阅列表.join('\n'));
+                filename = 'subscription_base64.txt';
+            } else {
+                content = 新订阅列表.join('\n');
+                filename = 'subscription.txt';
+            }
+
+            return new Response(content, { 
                 status: 200, 
                 headers: { 
-                    'Content-Type': 'text/plain;charset=utf-8',
-                    'Content-Disposition': 'attachment; filename="optimized_subscription.txt"'
+                    'Content-Type': contentType,
+                    'Content-Disposition': `attachment; filename="${filename}"`
                 } 
             });
         }
@@ -323,31 +372,166 @@ function 解析VLESS订阅(订阅链接) {
     }
 }
 
-function 生成优选订阅(原订阅链接, 优选地址列表) {
-    const 订阅配置 = 解析VLESS订阅(原订阅链接);
-    if (!订阅配置) {
-        return '解析订阅链接失败';
-    }
-
-    const 新订阅列表 = [];
-    
-    优选地址列表.forEach(地址行 => {
-        let 地址 = 地址行.trim();
-        let 节点名 = '';
+function 生成Clash配置(vlessList) {
+    const proxies = vlessList.map(vless => {
+        const url = new URL(vless);
+        const params = new URLSearchParams(url.search);
+        const remark = decodeURIComponent(url.hash.slice(1));
         
-        if (地址.includes('#')) {
-            const parts = 地址.split('#');
-            地址 = parts[0].trim();
-            节点名 = parts.slice(1).join('#').trim();
-        }
-        
-        if (!节点名) {
-            节点名 = `${订阅配置.remark}_${地址}`;
-        }
-        
-        const 新订阅 = `vless://${订阅配置.uuid}@${地址}:${订阅配置.port}?encryption=${订阅配置.params.encryption}&flow=${订阅配置.params.flow}&security=${订阅配置.params.security}&sni=${订阅配置.params.sni}&fp=${订阅配置.params.fp}&pbk=${订阅配置.params.pbk}&sid=${订阅配置.params.sid}&spx=${订阅配置.params.spx}&type=${订阅配置.params.type}&headerType=${订阅配置.params.headerType}#${encodeURIComponent(节点名)}`;
-        新订阅列表.push(新订阅);
+        return {
+            name: remark,
+            type: 'vless',
+            server: url.hostname,
+            port: url.port || 443,
+            uuid: url.username,
+            network: params.get('type') || 'tcp',
+            tls: params.get('security') === 'tls',
+            'client-fingerprint': params.get('fp') || 'chrome',
+            udp: true,
+            'skip-cert-verify': params.get('insecure') === '1',
+            servername: params.get('sni') || url.hostname
+        };
     });
 
-    return btoa(新订阅列表.join('\n'));
+    return {
+        proxies: proxies,
+        'proxy-groups': [
+            {
+                name: 'Proxy',
+                type: 'select',
+                proxies: ['auto', 'load-balance', ...proxies.map(p => p.name)]
+            },
+            {
+                name: 'auto',
+                type: 'url-test',
+                proxies: proxies.map(p => p.name),
+                url: 'http://www.gstatic.com/generate_204',
+                interval: 300
+            },
+            {
+                name: 'load-balance',
+                type: 'load-balance',
+                proxies: proxies.map(p => p.name),
+                url: 'http://www.gstatic.com/generate_204',
+                interval: 300
+            }
+        ],
+        rules: [
+            'DOMAIN-SUFFIX,cn,DIRECT',
+            'GEOIP,CN,DIRECT',
+            'MATCH,Proxy'
+        ]
+    };
+}
+
+function 生成SingBox配置(vlessList) {
+    const outbounds = vlessList.map(vless => {
+        const url = new URL(vless);
+        const params = new URLSearchParams(url.search);
+        const remark = decodeURIComponent(url.hash.slice(1));
+        
+        return {
+            type: 'vless',
+            tag: remark,
+            server: url.hostname,
+            server_port: parseInt(url.port) || 443,
+            uuid: url.username,
+            tls: {
+                enabled: params.get('security') === 'tls',
+                server_name: params.get('sni') || url.hostname,
+                insecure: params.get('insecure') === '1',
+                utls: {
+                    enabled: true,
+                    fingerprint: params.get('fp') || 'chrome'
+                }
+            },
+            transport: {
+                type: params.get('type') || 'tcp'
+            }
+        };
+    });
+
+    return {
+        log: {
+            disabled: false,
+            level: 'info',
+            timestamp: true
+        },
+        dns: {
+            servers: [
+                {
+                    tag: 'dns_proxy',
+                    address: 'tls://8.8.8.8'
+                },
+                {
+                    tag: 'dns_direct',
+                    address: 'h3://dns.alidns.com/dns-query',
+                    detour: 'DIRECT'
+                }
+            ],
+            rules: [
+                {
+                    outbound: 'any',
+                    server: 'dns_direct'
+                },
+                {
+                    clash_mode: 'Direct',
+                    server: 'dns_direct'
+                },
+                {
+                    clash_mode: 'Global',
+                    server: 'dns_proxy'
+                }
+            ],
+            final: 'dns_direct'
+        },
+        inbounds: [
+            {
+                type: 'mixed',
+                tag: 'mixed-in',
+                listen: '0.0.0.0',
+                listen_port: 2080
+            }
+        ],
+        outbounds: [
+            {
+                type: 'direct',
+                tag: 'DIRECT'
+            },
+            ...outbounds,
+            {
+                type: 'urltest',
+                tag: 'auto',
+                outbounds: outbounds.map(o => o.tag),
+                url: 'https://www.gstatic.com/generate_204',
+                interval: '10m'
+            },
+            {
+                type: 'select',
+                tag: 'Proxy',
+                outbounds: ['auto', 'DIRECT', ...outbounds.map(o => o.tag)]
+            }
+        ],
+        route: {
+            rules: [
+                {
+                    geosite: 'cn',
+                    outbound: 'DIRECT'
+                },
+                {
+                    geoip: 'cn',
+                    outbound: 'DIRECT'
+                },
+                {
+                    clash_mode: 'Direct',
+                    outbound: 'DIRECT'
+                },
+                {
+                    clash_mode: 'Global',
+                    outbound: 'Proxy'
+                }
+            ],
+            final: 'Proxy'
+        }
+    };
 }

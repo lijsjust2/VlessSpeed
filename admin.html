@@ -146,6 +146,20 @@
             line-height: 1.6;
         }
         
+        .subscription-item {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .subscription-item h4 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+        
         .copy-button {
             background: #4caf50;
             color: white;
@@ -172,7 +186,7 @@
             <p>1. 输入你的原订阅链接（VLESS Reality 格式）<br>
                2. 输入优选地址列表（每行一个，支持带节点名）<br>
                3. 点击保存配置<br>
-               4. 访问 <strong>/sub</strong> 获取优选后的订阅链接</p>
+               4. 复制下方的订阅链接到你的客户端</p>
         </div>
         
         <div class="form-group">
@@ -196,10 +210,38 @@
         <div class="info-box" style="margin-top: 30px;">
             <h3>🔗 获取优选订阅</h3>
             <p>保存配置后，访问以下链接获取优选后的订阅：</p>
-            <p style="margin-top: 10px; font-family: 'Courier New', monospace; background: #f5f5f5; padding: 10px; border-radius: 4px;">
-                <span id="subscriptionUrl">https://your-domain.com/sub</span>
-            </p>
-            <button class="copy-button" onclick="copySubscriptionUrl()">📋 复制订阅链接</button>
+            
+            <div class="subscription-item">
+                <h4>📋 自适应订阅</h4>
+                <p style="margin-top: 5px; font-family: 'Courier New', monospace; background: #f5f5f5; padding: 10px; border-radius: 4px; word-break: break-all;">
+                    <span id="subscriptionUrl">https://your-domain.com/sub</span>
+                </p>
+                <button class="copy-button" onclick="copySubscriptionUrl()">📋 复制订阅链接</button>
+            </div>
+            
+            <div class="subscription-item">
+                <h4>📱 Base64 订阅</h4>
+                <p style="margin-top: 5px; font-family: 'Courier New', monospace; background: #f5f5f5; padding: 10px; border-radius: 4px; word-break: break-all;">
+                    <span id="subscriptionUrlB64">https://your-domain.com/sub?format=b64</span>
+                </p>
+                <button class="copy-button" onclick="copySubscriptionUrl('b64')">📋 复制订阅链接</button>
+            </div>
+            
+            <div class="subscription-item">
+                <h4>⚔️ Clash 订阅</h4>
+                <p style="margin-top: 5px; font-family: 'Courier New', monospace; background: #f5f5f5; padding: 10px; border-radius: 4px; word-break: break-all;">
+                    <span id="subscriptionUrlClash">https://your-domain.com/sub?format=clash</span>
+                </p>
+                <button class="copy-button" onclick="copySubscriptionUrl('clash')">📋 复制订阅链接</button>
+            </div>
+            
+            <div class="subscription-item">
+                <h4>📦 SingBox 订阅</h4>
+                <p style="margin-top: 5px; font-family: 'Courier New', monospace; background: #f5f5f5; padding: 10px; border-radius: 4px; word-break: break-all;">
+                    <span id="subscriptionUrlSb">https://your-domain.com/sub?format=sb</span>
+                </p>
+                <button class="copy-button" onclick="copySubscriptionUrl('sb')">📋 复制订阅链接</button>
+            </div>
         </div>
     </div>
     
@@ -287,12 +329,24 @@
         }
         
         function updateSubscriptionUrl() {
-            const url = window.location.origin + '/sub';
-            document.getElementById('subscriptionUrl').textContent = url;
+            const baseUrl = window.location.origin + '/sub';
+            document.getElementById('subscriptionUrl').textContent = baseUrl;
+            document.getElementById('subscriptionUrlB64').textContent = baseUrl + '?format=b64';
+            document.getElementById('subscriptionUrlClash').textContent = baseUrl + '?format=clash';
+            document.getElementById('subscriptionUrlSb').textContent = baseUrl + '?format=sb';
         }
         
-        function copySubscriptionUrl() {
-            const url = document.getElementById('subscriptionUrl').textContent;
+        function copySubscriptionUrl(format = '') {
+            let url = '';
+            if (format === 'b64') {
+                url = document.getElementById('subscriptionUrlB64').textContent;
+            } else if (format === 'clash') {
+                url = document.getElementById('subscriptionUrlClash').textContent;
+            } else if (format === 'sb') {
+                url = document.getElementById('subscriptionUrlSb').textContent;
+            } else {
+                url = document.getElementById('subscriptionUrl').textContent;
+            }
             navigator.clipboard.writeText(url).then(() => {
                 showSuccess('订阅链接已复制到剪贴板！');
             }).catch(err => {
